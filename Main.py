@@ -3,64 +3,81 @@ import pandas as pd
 from datetime import datetime
 
 # Configuración de la página
-st.set_page_config(page_title="Gestión SIHO-A Profesional", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title="SIHO-A Dashboard", page_icon="🛡️", layout="wide")
 
-# --- LÓGICA DE NAVEGACIÓN ---
-st.sidebar.title("Navegación")
-pagina = st.sidebar.radio("Ir a:", ["Registro de Datos", "Reportes e Indicadores"])
+# --- CONEXIÓN AL EXCEL (Solo lectura para reportes) ---
+def cargar_datos():
+    try:
+        creds = st.secrets["GOOGLE_CREDENTIALS"]
+        # Aquí se usa gspread para leer tu archivo Base_Datos_Siho_A
+        from gspread_pandas import Spread
+        spread = Spread("Base_Datos_Siho_A", creds=creds)
+        df = spread.sheet_to_df(sheet="Datos", index=0)
+        # Convertimos la columna fecha a formato fecha real para poder filtrar
+        df['fecha'] = pd.to_datetime(df['fecha'], errors='coerce')
+        return df
+    except:
+        return pd.DataFrame()
 
-# --- DATOS DE EJEMPLO (Simulando tu Excel) ---
-# Nota: Aquí es donde la app lee tu Google Sheets. 
-# Para este ejemplo creamos datos para que veas cómo funciona el filtro.
-if 'datos_siho' not in st.session_state:
-    st.session_state.datos_siho = pd.DataFrame({
-        'Fecha': [pd.to_datetime("2024-01-10"), pd.to_datetime("2024-01-15")],
-        'Centro de Costo': ["Troil 2", "Base Morichal"],
-        'Actividad': ["Charla 5 min", "Inspección"],
-        'Estatus Dotación': ["Vencida", "Vigente"],
-        'Clasificación': ["CCP", "Troil"]
-    })
+df_principal = cargar_datos()
 
-# --- PÁGINA 1: REGISTRO ---
-if pagina == "Registro de Datos":
-    st.title("🛡️ Registro de Gestión SIHO-A")
-    
-    # (Aquí va tu bloque del contador de días y el formulario que ya tenemos)
-    # ... [Tu código de formulario actual] ...
-    st.info("Usa el menú de la izquierda para ver los Reportes.")
+# --- NAVEGACIÓN ---
+st.sidebar.title("Menú SIHO-A")
+opcion = st.sidebar.radio("Selecciona una opción:", ["Registro Diario", "Panel de Reportes"])
 
-# --- PÁGINA 2: REPORTES E INDICADORES ---
+if opcion == "Registro Diario":
+    st.title("🛡️ Sistema de Gestión SIHO-A")
+    # (Aquí mantienes tu código del contador de días y el formulario que ya funciona)
+    st.info("Utiliza el menú lateral para ir a la sección de Reportes.")
+
 else:
-    st.title("📊 Panel de Control e Indicadores SIHO-A")
+    st.title("📊 Panel de Indicadores y Reportes")
     
-    # --- FILTROS EN LA BARRA LATERAL ---
-    st.sidebar.header("Filtros de Búsqueda")
-    
-    fecha_inicio = st.sidebar.date_input("Desde", datetime(2024, 1, 1))
-    fecha_fin = st.sidebar.date_input("Hasta", datetime.now())
-    
-    centro_filtro = st.sidebar.multiselect("Filtrar por Centro de Costo", 
-                                          ["Base Morichal", "Base Bare", "Troil 1", "Troil 2", "Troil 3", "Troil 4", "Troil 5", "Troil 6", "Troil 7", "Troil 8", "Troil 9", "Troil 10", "Troil 11"])
-    
-    # --- CÁLCULO DE MÉTRICAS ---
-    col_m1, col_m2, col_m3 = st.columns(3)
-    
-    with col_m1:
-        st.metric("Total Charlas", "15") # Aquí el código sumará tus datos reales
-    with col_m2:
-        st.metric("Dotaciones Vencidas", "4", delta="-2", delta_color="inverse")
-    with col_m3:
-        st.metric("Certificaciones por Vencer", "8")
+    if df_principal.empty:
+        st.warning("No se encontraron datos en el Excel para mostrar reportes.")
+    else:
+        # --- FILTROS ---
+        st.sidebar.header("Filtros de Reporte")
+        
+        # Filtro de Fecha
+        fecha_min = df_principal['fecha'].min()
+        fecha_max = df_principal['fecha'].max()
+        rango_fecha = st.sidebar.date_input("Rango de fechas", [fecha_min, fecha_max])
+        
+        # Filtro de Centro de Costo
+        centros = ["Todos"] + sorted(df_principal['centro de costo'].unique().tolist())
+        centro_sel = st.sidebar.selectbox("Seleccionar Centro de Costo", centros)
+        
+        # Aplicar filtros al DataFrame
+        df_filtrado = df_principal.copy()
+        if len(rango_fecha) == 2:
+            df_filtrado = df_filtrado[(df_filtrado['fecha'] >= pd.Timestamp(rango_fecha[0])) & 
+                                     (df_filtrado['fecha'] <= pd.Timestamp(rango_fecha[1]))]
+        
+        if centro_sel != "Todos":
+            df_filtrado = df_filtrado[df_filtrado['centro de costo'] == centro_sel]
 
-    # --- TABLA DE DATOS FILTRADOS ---
-    st.subheader("📋 Detalle de Gestión")
-    # Aquí es donde ocurre la magia del filtro:
-    st.write(f"Mostrando resultados desde {fecha_inicio} hasta {fecha_fin}")
-    
-    # Ejemplo de tabla filtrable
-    st.dataframe(st.session_state.datos_siho, use_container_width=True)
+        # --- MÉTRICAS EN GRANDE ---
+        m1, m2, m3 = st.columns(3)
+        with m1:
+            total_charlas = len(df_filtrado[df_filtrado['categoría'].str.contains('Charla', case=False, na=False)])
+            st.metric("Total Charlas dadas", total_charlas)
+        with m2:
+            # [span_1](start_span)Filtro basado en tu columna 'estatus'[span_1](end_span)
+            vencidas = len(df_filtrado[df_filtrado['estatus'].str.contains('Vencid', case=False, na=False)])
+            st.metric("Dotaciones Vencidas", vencidas, delta_color="inverse")
+        with m3:
+            st.metric("Registros en este periodo", len(df_filtrado))
 
-    # Botón para descargar reporte en Excel
-    st.download_button(label="📥 Descargar Reporte en Excel", 
-                       data=st.session_state.datos_siho.to_csv(), 
-                       file_name=f"Reporte_SIHO_{datetime.now().date()}.csv")
+        # --- GRÁFICO DE BARRAS ---
+        st.subheader(f"Resumen de Actividades en {centro_sel}")
+        resumen_act = df_filtrado['categoría'].value_counts()
+        st.bar_chart(resumen_act)
+
+        # --- TABLA DE DATOS DETALLADA ---
+        st.subheader("📋 Detalle de los registros")
+        st.dataframe(df_filtrado, use_container_width=True)
+        
+        # Botón para descargar el reporte filtrado
+        csv = df_filtrado.to_csv(index=False).encode('utf-8')
+        st.download_button("📥 Descargar este reporte (Excel/CSV)", csv, "reporte_siho.csv", "text/csv")
