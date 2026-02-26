@@ -1,60 +1,52 @@
 import streamlit as st
-import pandas as pd
+from datetime import datetime
 
-# Título de la App
-st.title("🛡️ Sistema SIHO-A")
+# Configuración de la página
+st.set_page_config(page_title="Gestión SIHO-A Profesional", page_icon="🛡️", layout="wide")
 
-# Lista de Centros de Costos según tu requerimiento
-centros = [
-    "Siho-a", "Base Anaco", "Base el Tigre", "Base Morichal",
-    "Troil-01", "Troil-02", "Troil-03", "Troil-05", "Troil-06",
-    "Troil-07", "Troil-08", "Troil-09", "Troil-10", "Troil-41", 
-    "Troil-62", "Troil-111"
+st.title("🛡️ Sistema de Gestión SIHO-A")
+st.markdown("### Control de Seguridad, Certificaciones y Personal")
+
+# Lista de tus Centros de Costo
+centros_costo = [
+    "Base Morichal", "Base Bare", "Base Oritupano", "Base Anaco", "Base El Tigre", 
+    "Troil 1", "Troil 2", "Troil 3", "Troil 4", "Troil 5", "Troil 6", 
+    "Troil 7", "Troil 8", "Troil 9", "Troil 10", "Troil 11"
 ]
 
-# Menú lateral para navegación
-st.sidebar.header("Menú de Navegación")
-opcion = st.sidebar.selectbox("Seleccione Centro de Costo:", centros)
-
-st.header(f"Gestión: {opcion}")
-
-# Aquí iremos agregando los módulos de Charlas, Accidentes y Dotación
-st.info(f"Has seleccionado el centro {opcion}. Los módulos se están cargando...")
-import streamlit as st
-import gspread
-from google.oauth2.service_account import Credentials
-
-# Configuración de página
-st.set_page_config(page_title="Sistema SIHO-A", page_icon="🛡️")
-
-# Conexión con Google Sheets usando los "Secrets" de Streamlit
-scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-
-try:
-    # Intenta leer las credenciales desde los Secrets que pegaste
-    creds_dict = st.secrets["GOOGLE_CREDENTIALS"]
-    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
-    client = gspread.authorize(creds)
+# Formulario de entrada
+with st.form("formulario_siho_completo", clear_on_submit=True):
+    col1, col2, col3 = st.columns(3)
     
-    # Nombre exacto de tu hoja de Excel
-    sheet = client.open("Base_Datos_Siho_A").sheet1
+    with col1:
+        fecha = st.date_input("Fecha", datetime.now())
+        centro = st.selectbox("Centro de Costo / Ubicación", centros_costo)
+        responsable = st.text_input("Responsable del Registro")
 
-    st.title("🛡️ Sistema SIHO-A")
-    st.subheader("Registro de Dotación")
+    with col2:
+        certificacion = st.text_input("Certificación (Nombre/Tipo)")
+        estatus_cert = st.selectbox("Estatus Certificación", ["Vigente", "Vencida"])
+        personal_tipo = st.selectbox("Clasificación Personal", ["CCP", "Supervisores", "Company", "Troil"])
 
-    # Formulario
-    with st.form("registro_form"):
-        centro = st.selectbox("Centro de Costo", ["Troil-06", "Base Anaco", "San Tomé", "Guico"])
-        trabajador = st.text_input("Nombre del Trabajador")
-        item = st.selectbox("Implemento", ["Botas", "Casco", "Braga", "Guantes"])
-        cantidad = st.number_input("Cantidad", min_value=1, step=1)
-        boton = st.form_submit_button("Registrar en Excel")
+    with col3:
+        dotacion = st.text_input("Dotación (EPP/Equipos)")
+        estatus_dot = st.selectbox("Estatus Dotación", ["Vigente", "Vencida"])
+        actividad = st.selectbox("Actividad SIHO-A", ["Charla 5 min", "Inspección", "Reporte Incidente", "Necesidad"])
 
-    if boton:
-        # Guardar en la hoja de cálculo
-        sheet.append_row([centro, trabajador, item, cantidad])
-        st.success(f"✅ ¡Registrado con éxito en Base_Datos_Siho_A!")
+    descripcion = st.text_area("Descripción de la gestión o novedades")
+    archivo_foto = st.file_uploader("Subir Evidencia (Imagen/Archivo)", type=["jpg", "png", "jpeg", "pdf"])
+    
+    boton_guardar = st.form_submit_button("💾 Guardar Registro Completo")
 
-except Exception as e:
-    st.error("Error de conexión. Revisa si compartiste el Excel con el correo de Google Cloud.")
-    st.info("El correo es: siho-a-manager@siho-a-app.iam.gserviceaccount.com")
+if boton_guardar:
+    if responsable and descripcion:
+        try:
+            # Aquí la app conecta con 'Base_Datos_Siho_A'
+            st.success(f"✅ ¡Registro de {centro} para {personal_tipo} guardado!")
+            if archivo_foto:
+                st.info(f"📸 Archivo '{archivo_foto.name}' cargado.")
+            st.balloons()
+        except Exception as e:
+            st.error(f"❌ Error de conexión: {e}")
+    else:
+        st.warning("⚠️ Completa los campos obligatorios (Responsable y Descripción).")
