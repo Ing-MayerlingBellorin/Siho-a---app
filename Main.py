@@ -35,9 +35,9 @@ st.sidebar.title("🛡️ SIHO-A Navigation")
 pagina = st.sidebar.radio("Ir a:", ["Registro Diario", "Panel de Reportes Normativos"])
 
 centros_costo = [
-    "Base Morichal", "Base Bare", "Base Oritupano", "Base Anaco", "Base El Tigre", 
-    "Troil 1", "Troil 2", "Troil 3", "Troil 4", "Troil 5", "Troil 6", 
-    "Troil 7", "Troil 8", "Troil 9", "Troil 10", "Troil 11"
+    "Base Morichal", "Base el tigre", "Base pariaguan", "Base Anaco", "Base Caracas", 
+    "Troil-01", "Troil-02", "Troil-03", "Troil-04", "Troil-05", "Troil-06", 
+    "Troil-07", "Troil-08", "Troil-09", "Troil-41", "Troil-62", "Troil-111"
 ]
 
 # 4. PÁGINA DE REGISTRO
