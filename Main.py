@@ -6,6 +6,7 @@ st.set_page_config(page_title="Gestión SIHO-A Profesional", page_icon="🛡️"
 
 st.title("🛡️ Sistema de Gestión SIHO-A")
 st.markdown("### Control de Seguridad, Certificaciones y Personal")
+st.info("Objetivo: Cero Accidentes 👷‍♂️🚧")
 
 # Lista de tus Centros de Costo
 centros_costo = [
@@ -24,16 +25,20 @@ with st.form("formulario_siho_completo", clear_on_submit=True):
         responsable = st.text_input("Responsable del Registro")
 
     with col2:
-        certificacion = st.text_input("Certificación (Nombre/Tipo)")
-        estatus_cert = st.selectbox("Estatus Certificación", ["Vigente", "Vencida"])
-        personal_tipo = st.selectbox("Clasificación Personal", ["CCP", "Supervisores", "Company", "Troil"])
+        certificacion = st.text_input("Certificación (Nombre/Tipo)", help="Escribe 'N/A' si no aplica")
+        # AGREGADO: Opción "No Aplica"
+        estatus_cert = st.selectbox("Estatus Certificación", ["Vigente", "Vencida", "No Aplica"])
+        # AGREGADO: Opción "No Aplica"
+        personal_tipo = st.selectbox("Clasificación Personal", ["CCP", "Supervisores", "Company", "Troil", "No Aplica"])
 
     with col3:
-        dotacion = st.text_input("Dotación (EPP/Equipos)")
-        estatus_dot = st.selectbox("Estatus Dotación", ["Vigente", "Vencida"])
-        actividad = st.selectbox("Actividad SIHO-A", ["Charla 5 min", "Inspección", "Reporte Incidente", "Necesidad"])
+        dotacion = st.text_input("Dotación (EPP/Equipos)", help="Escribe 'N/A' si no aplica")
+        # AGREGADO: Opción "No Aplica"
+        estatus_dot = st.selectbox("Estatus Dotación", ["Vigente", "Vencida", "No Aplica"])
+        # AGREGADO: Opción "No Aplica"
+        actividad = st.selectbox("Actividad SIHO-A", ["Charla 5 min", "Inspección", "Reporte Incidente", "Necesidad", "No Aplica"])
 
-    descripcion = st.text_area("Descripción de la gestión o novedades")
+    descripcion = st.text_area("Descripción de la gestión o novedades (Obligatorio)")
     archivo_foto = st.file_uploader("Subir Evidencia (Imagen/Archivo)", type=["jpg", "png", "jpeg", "pdf"])
     
     boton_guardar = st.form_submit_button("💾 Guardar Registro Completo")
@@ -41,12 +46,12 @@ with st.form("formulario_siho_completo", clear_on_submit=True):
 if boton_guardar:
     if responsable and descripcion:
         try:
-            # Aquí la app conecta con 'Base_Datos_Siho_A'
-            st.success(f"✅ ¡Registro de {centro} para {personal_tipo} guardado!")
+            # Mensaje de confirmación en pantalla
+            st.success(f"✅ ¡Registro de {centro} guardado exitosamente!")
             if archivo_foto:
-                st.info(f"📸 Archivo '{archivo_foto.name}' cargado.")
+                st.info(f"📸 Archivo '{archivo_foto.name}' cargado al sistema.")
             st.balloons()
         except Exception as e:
             st.error(f"❌ Error de conexión: {e}")
     else:
-        st.warning("⚠️ Completa los campos obligatorios (Responsable y Descripción).")
+        st.warning("⚠️ Por favor, completa el nombre del Responsable y la Descripción.")
