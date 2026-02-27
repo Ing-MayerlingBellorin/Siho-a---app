@@ -1,14 +1,13 @@
-
 import streamlit as st
 import pandas as pd
 from datetime import datetime
 import plotly.express as px
 from streamlit_gsheets import GSheetsConnection
 
-# 1. CONFIGURACIÓN INICIAL
-st.set_page_config(page_title="SIHO-A Gestión Total", page_icon="🛡️", layout="wide")
+# 1. CONFIGURACIÓN DE PÁGINA
+st.set_page_config(page_title="SIHO-A Gestión", page_icon="🛡️", layout="wide")
 
-# 2. FUNCIÓN PARA CARGAR DATOS DEL EXCEL
+# 2. CARGA DE DATOS (CONEXIÓN A EXCEL)
 def cargar_datos():
     try:
         conn = st.connection("gsheets", type=GSheetsConnection)
@@ -21,20 +20,19 @@ def cargar_datos():
 
 df_principal = cargar_datos()
 
-# 3. MENÚ LATERAL
-st.sidebar.title("🛡️ Gestión SIHO-A")
-pagina = st.sidebar.radio("Navegación:", ["Registro Diario", "Bitácora y Reportes"])
+# 3. NAVEGACIÓN
+st.sidebar.title("🛡️ Panel SIHO-A")
+seccion = st.sidebar.radio("Navegación:", ["Registro Diario", "Bitácora y Reportes"])
 
-# Lista de Centros de Costo
-centros = ["Base Morichal", "Base Caracas", "Base pariaguan", "Base Anaco", "Base El Tigre", 
+centros = ["Base Morichal", "Base Caracas", "Base Pariaguan", "Base Anaco", "Base El Tigre", 
            "Troil 1", "Troil 2", "Troil 3", "Troil 4", "Troil 5", "Troil 6", 
            "Troil 7", "Troil 8", "Troil 9", "Troil 10", "Troil 11"]
 
-# --- SECCIÓN 1: REGISTRO ---
-if pagina == "Registro Diario":
+# --- SECCIÓN: REGISTRO ---
+if seccion == "Registro Diario":
     st.title("🛡️ Sistema de Gestión SIHO-A")
     
-    # CONTADOR CERO ACCIDENTES
+    # CONTADOR (Basado en tu fecha de inicio)
     if 'f_inicio' not in st.session_state:
         st.session_state.f_inicio = datetime(2026, 1, 1).date()
     
@@ -53,7 +51,6 @@ if pagina == "Registro Diario":
 
     st.markdown("---")
     
-    # FORMULARIO
     with st.form("form_siho", clear_on_submit=True):
         c1, c2, c3 = st.columns(3)
         with c1:
@@ -70,14 +67,15 @@ if pagina == "Registro Diario":
             act = st.selectbox("Actividad", ["Charla 5 min", "Inspección", "Dotación", "N/A"])
         
         desc = st.text_area("Descripción de la Gestión")
-        foto_archivo = st.file_uploader("📸 Cargar Evidencia Fotográfica", type=["jpg", "png", "jpeg"])
+        foto_archivo = st.file_uploader("📸 Cargar Evidencia (Foto)", type=["jpg", "png", "jpeg"])
         
         btn_save = st.form_submit_button("💾 GUARDAR REGISTRO")
 
     if btn_save:
         if resp and desc:
             try:
-                # Guardamos el nombre de la foto
+                # El ID de tu carpeta ya está integrado aquí para futuras expansiones
+                ID_CARPETA = "1FD14E0qxiTv_zXn9rvSyJ0VsNJs8trYA"
                 nombre_foto = foto_archivo.name if foto_archivo else "Sin foto"
                 
                 nuevo_reg = pd.DataFrame([{
@@ -99,14 +97,14 @@ if pagina == "Registro Diario":
                 df_new = pd.concat([df_old, nuevo_reg], ignore_index=True)
                 conn.update(worksheet="Datos", data=df_new)
                 
-                st.success("✅ ¡Registro guardado exitosamente!")
+                st.success(f"✅ ¡Registro de {ubi} guardado con éxito!")
                 st.balloons()
             except Exception as e:
-                st.error(f"❌ Error al conectar con Excel: {e}")
+                st.error(f"❌ Error al guardar: {e}")
         else:
-            st.warning("⚠️ Responsable y Descripción son obligatorios.")
+            st.warning("⚠️ Por favor completa el Responsable y la Descripción.")
 
-# --- SECCIÓN 2: BITÁCORA Y REPORTES ---
+# --- SECCIÓN: BITÁCORA ---
 else:
     st.title("📊 Bitácora e Indicadores")
     
@@ -115,30 +113,26 @@ else:
         st.rerun()
 
     if df_principal.empty:
-        st.warning("⚠️ No hay datos registrados aún.")
+        st.warning("⚠️ No hay registros. Verifica que tu hoja de Excel se llame 'Datos'.")
     else:
-        # Filtros
         df_ord = df_principal.sort_values(by='Fecha', ascending=False)
-        busq = st.sidebar.text_input("🔍 Buscar por texto:")
-        if busq:
-            df_ord = df_ord[df_ord.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)]
-
-        # Dashboard
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Total Actividades", len(df_ord))
+        
+        # Métricas rápidas
+        m1, m2 = st.columns(2)
+        m1.metric("Total de Gestiones", len(df_ord))
         vencidos = len(df_ord[df_ord['Estatus Dotación'] == 'Vencida'])
-        m2.metric("EPP Vencidos", vencidos, delta_color="inverse")
-        m3.metric("Ubicación con más reportes", df_ord['Centro de Costo'].mode()[0] if not df_ord.empty else "N/A")
+        m2.metric("Alertas (Vencidos)", vencidos, delta_color="inverse")
 
-        # Gráficos
+        st.subheader("📜 Historial de Registros")
+        st.dataframe(df_ord, use_container_width=True)
+
+        st.markdown("---")
+        # Gráficos de cumplimiento
         g1, g2 = st.columns(2)
         with g1:
-            fig_pie = px.pie(df_ord, names='Estatus Dotación', title="Estatus Normativo",
+            fig_pie = px.pie(df_ord, names='Estatus Dotación', title="Estatus Normativo Global",
                              color='Estatus Dotación', color_discrete_map={'Vigente':'#28a745','Vencida':'#dc3545','N/A':'#6c757d'})
             st.plotly_chart(fig_pie, use_container_width=True)
         with g2:
-            fig_bar = px.bar(df_ord['Centro de Costo'].value_counts(), title="Reportes por Centro")
-            st.plotly_chart(fig_bar, use_container_width=True)
-
-        st.subheader("📜 Historial Detallado (Bitácora)")
-        st.dataframe(df_ord, use_container_width=True)
+            st.subheader("Reportes por Ubicación")
+            st.bar_chart(df_ord['Centro de Costo'].value_counts())
