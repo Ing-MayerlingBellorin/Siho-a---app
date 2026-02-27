@@ -5,3 +5,4 @@ gspread
 google-auth
 plotly
 st-gsheets-connection
+xlsxwriter
