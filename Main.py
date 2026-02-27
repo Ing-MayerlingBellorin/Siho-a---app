@@ -101,8 +101,47 @@ else:
         
         # Dashboard de cumplimiento
         col_g1, col_g2 = st.columns(2)
-        
-        with col_g1:
+else:
+    st.title("📊 Bitácora y Reportes SIHO-A")
+    
+    # BOTÓN PARA REFRESCAR DATOS (Esto soluciona que no veas lo recién guardado)
+    if st.button("🔄 Actualizar Datos del Excel"):
+        st.cache_data.clear()
+        st.rerun()
+
+    if df_siho.empty:
+        st.warning("⚠️ No se encuentran registros. Asegúrate de que la hoja en Excel se llame 'Datos'.")
+    else:
+        # 1. ORDENAR POR FECHA (Lo más reciente primero)
+        df_ordenado = df_siho.sort_values(by='Fecha', ascending=False)
+
+        # 2. FILTROS DE BÚSQUEDA
+        col_f1, col_f2 = st.columns(2)
+        with col_f1:
+            busqueda = st.text_input("🔍 Buscar por Responsable o Centro:", "")
+        with col_f2:
+            filtro_fecha = st.date_input("Filtrar desde esta fecha:", datetime(2024, 1, 1))
+
+        # Aplicar filtros
+        df_final = df_ordenado[df_ordenado['Fecha'] >= pd.Timestamp(filtro_fecha)]
+        if busqueda:
+            df_final = df_final[df_final.astype(str).apply(lambda x: x.str.contains(busqueda, case=False)).any(axis=1)]
+
+        # 3. MOSTRAR LA TABLA DE REGISTROS (Tu Bitácora)
+        st.markdown("### 📜 Historial de Registros Guardados")
+        st.dataframe(df_final, use_container_width=True)
+
+        # 4. GRÁFICOS DE RESUMEN
+        st.markdown("---")
+        st.subheader("📈 Resumen Visual de la Gestión")
+        c1, c2 = st.columns(2)
+        with c1:
+            fig_act = px.pie(df_final, names='Actividad', title="Tipos de Actividades")
+            st.plotly_chart(fig_act, use_container_width=True)
+        with c2:
+            fig_centro = px.bar(df_final, x='Centro de Costo', title="Registros por Ubicación")
+            st.plotly_chart(fig_centro, use_container_width=True)
+          with col_g1:
             st.subheader("Estatus Normativo (Dotación)")
             # Gráfico de torta profesional con Plotly
             fig_p = px.pie(df_filtrado, names='Estatus Dotación', 
