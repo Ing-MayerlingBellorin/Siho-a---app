@@ -1,17 +1,17 @@
+
 import streamlit as st
 import pandas as pd
 from datetime import datetime
 import io
 from streamlit_gsheets import GSheetsConnection
 
-# 1. SEGURIDAD Y CONFIGURACIÓN
+# 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="Gestión SIHO-A", page_icon="🛡️", layout="wide")
-USUARIOS = {"adm": "1234", "supervisor1": "1234"}
 
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 
-# --- PANTALLA DE LOGIN ---
+# --- LOGIN ---
 if not st.session_state.autenticado:
     st.markdown("<h1 style='text-align:center;'>🛡️ SIHO-A: ACCESO</h1>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.5, 1])
@@ -20,28 +20,20 @@ if not st.session_state.autenticado:
             u = st.text_input("Usuario")
             p = st.text_input("Clave", type="password")
             if st.button("INGRESAR", use_container_width=True):
-                if u in USUARIOS and USUARIOS[u] == p:
+                if u == "adm" and p == "1234":
                     st.session_state.autenticado = True
                     st.session_state.usuario_actual = u
                     st.rerun()
                 else:
                     st.error("❌ Credenciales incorrectas")
-
 else:
     # CONEXIÓN
     conn = st.connection("gsheets", type=GSheetsConnection)
 
-    # Sidebar
-    st.sidebar.title(f"👤 {st.session_state.usuario_actual}")
-    if st.sidebar.button("🔒 Cerrar Sesión"):
-        st.session_state.autenticado = False
-        st.rerun()
-    
-    menu = st.sidebar.radio("Navegación:", ["Registro de Gestión", "Bitácora y Reportes"])
+    menu = st.sidebar.radio("Navegación:", ["Registro de Gestión", "Bitácora"])
 
-    # --- REGISTRO ---
     if menu == "Registro de Gestión":
-        st.title("🛡️ Gestión SIHO-A: Registro Diario")
+        st.title("🛡️ Gestión SIHO-A")
         
         # Conteo desde 01/01/2026
         dias = (datetime.now().date() - datetime(2026, 1, 1).date()).days
@@ -68,11 +60,10 @@ else:
             
             if st.form_submit_button("💾 GUARDAR Y SINCRONIZAR", use_container_width=True):
                 try:
-                    # Leemos y LIMPIAMOS los nombres de las columnas del Excel
+                    # Intento de lectura con limpieza de nombres
                     df_old = conn.read(worksheet="Datos", ttl=0)
                     df_old.columns = df_old.columns.str.strip().str.replace('\u200b', '')
                     
-                    # Creamos la fila con nombres limpios
                     nueva_fila = pd.DataFrame([{
                         "Fecha": f_reg.strftime('%Y-%m-%d'),
                         "Centro de Costo": ubi,
@@ -92,20 +83,12 @@ else:
                     st.balloons()
                     st.success("✅ ¡Sincronizado con éxito!")
                 except Exception as e:
-                    st.error("❌ Error de sincronización. Verifica que la pestaña de tu Excel se llame exactamente 'Datos'.")
+                    st.error(f"❌ Error de sincronización. Verifica que la pestaña se llame 'Datos'. Detalle: {e}")
 
-    # --- BITÁCORA ---
     else:
         st.title("📊 Bitácora")
         try:
             df = conn.read(worksheet="Datos", ttl=0)
-            st.dataframe(df.sort_values(by="Fecha", ascending=False), use_container_width=True)
-            
-            # Excel Download
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                df.to_excel(writer, index=False)
-            st.download_button("📥 Descargar Reporte (Excel)", output.getvalue(), "Reporte_SIHO.xlsx")
-            st.info("💡 Para generar PDF: Presiona Ctrl+P.")
+            st.dataframe(df, use_container_width=True)
         except:
-            st.info("Aún no hay datos registrados.")
+            st.info("No se encontraron datos.")
