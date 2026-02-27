@@ -25,7 +25,7 @@ df_principal = cargar_datos()
 st.sidebar.title("🛡️ Navegación SIHO-A")
 pagina = st.sidebar.radio("Ir a:", ["Registro Diario", "Panel de Reportes Normativos"])
 
-centros_costo = ["Base Morichal", "Base Bare", "Base Oritupano", "Base Anaco", "Base El Tigre", "Troil 1", "Troil 2", "Troil 3", "Troil 4", "Troil 5", "Troil 6", "Troil 7", "Troil 8", "Troil 9", "Troil 10", "Troil 11"]
+centros_costo = ["Base Morichal", "Base Caracas", "Base pariaguan", "Base Anaco", "Base El Tigre", "Troil 1", "Troil 2", "Troil 3", "Troil 4", "Troil 5", "Troil 6", "Troil 7", "Troil 8", "Troil 9", "Troil 10", "Troil 11"]
 
 # --- PÁGINA DE REGISTRO ---
 if pagina == "Registro Diario":
@@ -33,7 +33,7 @@ if pagina == "Registro Diario":
     
     # Contador (Mantenemos tu lógica que ya funciona)
     if 'fecha_inicio_cero' not in st.session_state:
-        st.session_state.fecha_inicio_cero = datetime(2024, 1, 1).date()
+        st.session_state.fecha_inicio_cero = datetime(2026, 1, 1).date()
     col_c1, col_c2 = st.columns([1, 2])
     with col_c1:
         f_incidente = st.date_input("Fecha Inicio Conteo:", st.session_state.fecha_inicio_cero)
